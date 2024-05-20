@@ -1,0 +1,67 @@
+h1 {
+    font-family: 'Arial', sans-serif; 
+    font-size: 36px;                 
+    font-weight: bold;               
+    color: #333;                   
+    text-align: center;             
+    margin: 20px 0;                  
+    padding: 10px;                    
+    background-color: #f4f4f4;       
+    border-bottom: 2px solid #ccc;    
+    line-height: 1.5;                 
+    text-transform: uppercase;       
+    letter-spacing: 1px;              
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
+  }
+
+  .axis-x text {
+    font-size: 12px;
+  }
+
+  .axis-y text {
+    font-size: 12px;
+  }
+
+  #yearSlider {
+    margin: 20px;
+    width: 80%;
+    
+    margin-right: 10px;
+  }
+
+  #yearValue {
+    font-size: 16px;
+    margin: 10px;
+  }
+
+  #genreSelect {
+    margin: 20px;
+  }
+
+  .chart-container {
+    display: flex;
+    justify-content:space-evenly;
+  }
+
+  .chart {
+    width: 50%;
+  }
+
+  .header{
+    display: flex;
+  justify-content: space-between;
+  }
+
+  .slider_
+  {
+    width: 50%;
+  }
+
+  .chart-container {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+ 
+  
