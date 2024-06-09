@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video game sales visualization</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+</head>
+
+<body>
+  <h1>VIDEO GAME SALES VISUALIZATION</h1>
+  <div class="header">
+    <div class="slider_">
+      <label for="yearSlider">Select Year:</label>
+      <input type="range" id="yearSlider" min="1980" max="2016" step="1" value="2016">
+      <span id="yearValue">2016</span>
+    </div>
+    <div class="genre_">
+      <label for="genreSelect">Select Genre:</label>
+      <select id="genreSelect">
+        <option value="all">All</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="chart-container">
+    <svg id="chart1" class="chart" width="700" height="450"></svg>
+    <svg id="chart2" class="chart" width="700" height="450"></svg>
+  </div>
+  <div class="chart-container">
+    <svg id="pieChart" class="chart" width="700" height="450"></svg>
+    <svg id="chart3" class="chart" width="700" height="450"></svg>
+  </div>
+
+  <script>
+    var margin = { top: 40, right: 20, bottom: 70, left: 80 };
+    var width = 700 - margin.left - margin.right;
+    var height = 450 - margin.top - margin.bottom;
+    var radius = Math.min(width, height) / 2;
+
+    var colorPalette = [
+      "#1f77b4", // blue
+      "#ff7f0e", // orange
+      "#2ca02c", // green
+      "#d62728", // red
+      "#9467bd", // purple
+      "#8c564b", // brown
+      "#e377c2", // pink
+      "#7f7f7f", // gray
+      "#bcbd22", // olive
+      "#17becf", // cyan
+      "#ff9896", // salmon
+      "#aec7e8"  // light blue
+    ];
+
+    // Create SVG elements
+    var svg1 = d3.select("#chart1")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    var svg2 = d3.select("#chart2")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    var svgPie = d3.select("#pieChart")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + (width / 2 + margin.left) + "," + (height / 2 + margin.top) + ")");
+
+    var svg3 = d3.select('#chart3')
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom + 50)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+
+    // Range - koliko zauzima mjesta, domain - domena elemenata
+    // scaleBand za kategorije, scaleLinear za linearno
+    var x1 = d3.scaleBand()
+      .range([0, width])
+      .padding(0.1);
+
+    var y1 = d3.scaleLinear()
+      .range([height, 0]);
+
+    var x2 = d3.scaleLinear()
+      .domain([1980, 2016])
+      .range([0, width]);
+
+    var y2 = d3.scaleLinear()
+      .range([height, 0]);
+
+    var x3 = d3.scaleBand()
+      .range([0, width])
+      .padding(0.1);
+
+    var y3 = d3.scaleLinear()
+      .range([height, 0]);
+
+    // Add initial axes groups
+    svg1.append("g")
+      .attr("class", "axis-x1")
+      .attr("transform", "translate(0," + height + ")");
+
+    svg1.append("g")
+      .attr("class", "axis-y1");
+
+    svg2.append("g")
+      .attr("class", "axis-x2")
+      .attr("transform", "translate(0," + height + ")");
+
+    svg2.append("g")
+      .attr("class", "axis-y2");
+
+    svg3.append("g")
+      .attr("class", "axis-x3")
+      .attr("transform", "translate(0," + height + ")");
+
+    svg3.append("g")
+      .attr("class", "axis-y3");
+
+    // Load JSON data
+    d3.json("data.json").then(function (data) {
+      // Get unique years and genres from data
+      var years = Array.from(new Set(data.map(function (d) { return d.Year; }))).sort();
+      var genres = Array.from(new Set(data.map(function (d) { return d.Genre; }))).sort();
+
+      // Update slider range based on years in data
+      var yearSlider = d3.select("#yearSlider");
+      yearSlider.attr("min", d3.min(years))
+        .attr("max", d3.max(years))
+        .attr("value", d3.max(years));
+
+      // Add genre options to select dropdown
+      var genreSelect = d3.select("#genreSelect");
+      genreSelect.selectAll("option.genre-option")
+        .data(genres)
+        .enter()
+        .append("option")
+        .attr("class", "genre-option")
+        .attr("value", function (d) { return d; })
+        .text(function (d) { return d; });
+
+      // Function to update the first chart based on the selected year
+      function updateChart1(selectedYear) {
+        d3.select("#yearValue").text(selectedYear);
+
+        // Filter data based on the selected year
+        var filteredData = selectedYear === 'all' ? data : data.filter(function (d) {
+          return d.Year == selectedYear;
+        });
+
+        var genreCounts = {};
+        filteredData.forEach(function (game) {
+          if (game.Genre in genreCounts) {
+            genreCounts[game.Genre]++;
+          } else {
+            genreCounts[game.Genre] = 1;
+          }
+        });
+
+        // Convert genre counts to array of objects
+        var genreData = [];
+        for (var genre in genreCounts) {
+          genreData.push({
+            genre: genre,
+            count: genreCounts[genre]
+          });
+        }
+
+        genreData.sort(function (a, b) {
+          return b.count - a.count;
+        });
+
+        // Update scales
+        x1.domain(genreData.map(function (d) { return d.genre; }));
+        y1.domain([0, d3.max(genreData, function (d) { return d.count; })]).nice();
+
+        // Bind data to bars
+        var bars = svg1.selectAll(".bar1")
+          .data(genreData);
+
+        // Enter new bars
+        // Add event listener to bars in the first chart
+        bars.enter().append("rect")
+          .attr("class", "bar1")
+          .attr("x", function (d) { return x1(d.genre); })
+          .attr("y", function (d) { return y1(d.count); })
+          .attr("width", x1.bandwidth())
+          .attr("height", function (d) { return height - y1(d.count); })
+          .attr("fill", function (d, i) { return colorPalette[i % colorPalette.length]; })
+          .on("click", function (event, d) {
+            var clickedGenre = d.genre;
+            // Update the genre select dropdown
+            d3.select("#genreSelect").property("value", clickedGenre).dispatch("change");
+          })
+          .style("cursor", "pointer");
+
+
+        // Update existing bars
+        bars.transition()
+          .duration(750)
+          .attr("x", function (d) { return x1(d.genre); })
+          .attr("y", function (d) { return y1(d.count); })
+          .attr("width", x1.bandwidth())
+          .attr("height", function (d) { return height - y1(d.count); })
+          .attr("fill", function (d, i) { return colorPalette[i % colorPalette.length]; });
+
+        // Remove old bars
+        bars.exit().remove();
+
+        svg1.selectAll(".grid").remove();
+        svg1.append("g")
+          .attr("class", "grid")
+          .call(d3.axisLeft(y1)
+            .tickSize(-width)
+            .tickFormat(""))
+          .selectAll("line")
+          .style("stroke", "black")
+          .style("stroke-dasharray", "2,2")
+          .style("opacity", "0.5");
+
+
+
+        // Update x axis
+        svg1.select(".axis-x1")
+          .transition()
+          .duration(750)
+          .call(d3.axisBottom(x1))
+          .selectAll("text")
+          .style("text-anchor", "end")
+          .attr("dx", "-.8em")
+          .attr("dy", ".15em")
+          .attr("transform", "rotate(-45)");
+
+        // Update y axis
+        svg1.select(".axis-y1")
+          .transition()
+          .duration(750)
+          .call(d3.axisLeft(y1)
+          );
+
+        // Add x axis label
+        svg1.selectAll(".x-axis-label1").remove();
+        svg1.append("text")
+          .attr("class", "x-axis-label1")
+          .attr("x", width / 2)
+          .attr("y", height + margin.bottom - 10)
+          .style("text-anchor", "middle")
+          .text("Genre");
+
+        // Add y axis label
+        svg1.selectAll(".y-axis-label1").remove();
+        svg1.append("text")
+          .attr("class", "y-axis-label1")
+          .attr("transform", "rotate(-90)")
+          .attr("y", 0 - margin.left)
+          .attr("x", 0 - (height / 2))
+          .attr("dy", "1em")
+          .style("text-anchor", "middle")
+          .text("Number of Games");
+
+        // Add title
+        svg1.selectAll(".chart-title1").remove();
+        svg1.append("text")
+          .attr("class", "chart-title1")
+          .attr("x", width / 2)
+          .attr("y", 0 - (margin.top / 2))
+          .attr("text-anchor", "middle")
+          .style("font-size", "16px")
+          .style("text-decoration", "underline")
+          .text("Number of Games by Genre for " + selectedYear);
+
+        updatePieChart(genreData);
+
+      }
+
+
+      function updateChart2(selectedGenre) {
+        // Filter data based on the selected genre
+        var filteredData = selectedGenre === 'all' ? data : data.filter(function (d) {
+          return d.Genre == selectedGenre;
+        });
+
+        // Aggregate global sales by year
+        var salesData = d3.rollup(filteredData,
+          function (v) { return d3.sum(v, function (d) { return d.Global_Sales; }); },
+          function (d) { return d.Year; });
+
+        // Convert Map to array of objects
+        var salesArray = Array.from(salesData, function (d) {
+          return { year: d[0], sales: d[1] };
+        });
+
+        // Ensure we have data for all years from 1980 to 2016
+        var allYears = d3.range(1980, 2017);
+        salesArray = allYears.map(function (year) {
+          var entry = salesArray.find(function (d) { return d.year === year; });
+          return entry ? entry : { year: year, sales: 0 };
+        });
+
+        // Sort sales data by year
+        salesArray.sort(function (a, b) {
+          return a.year - b.year;
+        });
+
+        // Update scales
+        x2.domain(allYears); // Use allYears directly as the domain
+        y2.domain([0, d3.max(salesArray, function (d) { return d.sales; })]).nice();
+
+        // Create a band scale for the x-axis ticks
+        var x2Band = d3.scaleBand()
+          .domain(allYears)
+          .range([0, width])
+          .padding(0.1);
+
+        // Bind data to bars
+        var bars = svg2.selectAll(".bar2")
+          .data(salesArray);
+
+        // Enter new bars
+        bars.enter().append("rect")
+          .attr("class", "bar2")
+          .attr("x", function (d) { return x2Band(d.year); })
+          .attr("y", function (d) { return y2(d.sales); })
+          .attr("width", x2Band.bandwidth())
+          .attr("height", function (d) { return height - y2(d.sales); })
+          .attr("fill", colorPalette[0])
+          .on("click", function (event, d) {
+            var clickedYear = d.year;
+            var clickedGenre = d3.select("#genreSelect").property("value");
+            createThirdGraph(clickedYear, clickedGenre);
+          })
+          .style("cursor", "pointer");
+
+        // Update existing bars
+        bars.transition()
+          .duration(750)
+          .attr("x", function (d) { return x2Band(d.year); })
+          .attr("y", function (d) { return y2(d.sales); })
+          .attr("width", x2Band.bandwidth())
+          .attr("height", function (d) { return height - y2(d.sales); })
+          .attr("fill", colorPalette[0]);
+
+        // Remove old bars
+        bars.exit().remove();
+
+        svg2.selectAll(".grid").remove();
+        svg2.append("g")
+          .attr("class", "grid")
+          .call(d3.axisLeft(y2)
+            .tickSize(-width)
+            .tickFormat(""))
+          .selectAll("line")
+          .style("stroke", "black")
+          .style("stroke-dasharray", "2,2")
+          .style("opacity", "0.5");
+
+
+        // Update x axis
+        svg2.select(".axis-x2")
+          .transition()
+          .duration(750)
+          .call(d3.axisBottom(x2Band)
+            .tickFormat(d3.format("d"))
+            .tickValues(allYears)) // Ensures every year is shown
+          .selectAll("text")
+          .style("text-anchor", "end")
+          .attr("dx", "-.8em")
+          .attr("dy", ".15em")
+          .attr("transform", "rotate(-45)");
+
+        // Update y axis
+        svg2.select(".axis-y2")
+          .transition()
+          .duration(750)
+          .call(d3.axisLeft(y2));
+
+        // Add x axis label
+        svg2.selectAll(".x-axis-label2").remove();
+        svg2.append("text")
+          .attr("class", "x-axis-label2")
+          .attr("x", width / 2)
+          .attr("y", height + margin.bottom - 10)
+          .style("text-anchor", "middle")
+          .text("Year");
+
+        // Add y axis label
+        svg2.selectAll(".y-axis-label2").remove();
+        svg2.append("text")
+          .attr("class", "y-axis-label2")
+          .attr("transform", "rotate(-90)")
+          .attr("y", 0 - margin.left)
+          .attr("x", 0 - (height / 2))
+          .attr("dy", "1em")
+          .style("text-anchor", "middle")
+          .text("Global Sales (millions)");
+
+        // Add title
+        svg2.selectAll(".chart-title2").remove();
+        svg2.append("text")
+          .attr("class", "chart-title2")
+          .attr("x", width / 2)
+          .attr("y", 0 - (margin.top / 2))
+          .attr("text-anchor", "middle")
+          .style("font-size", "16px")
+          .style("text-decoration", "underline")
+          .text("Global Sales by Year for " + selectedGenre);
+
+      }
+
+      function createThirdGraph(selectedYear, selectedGenre) {
+        // Filter data for the selected year, genre, and top 5 games by global sales
+        var filteredData = data.filter(function (d) {
+          return d.Year === selectedYear && d.Genre === selectedGenre;
+        }).sort(function (a, b) {
+          return b.Global_Sales - a.Global_Sales;
+        }).slice(0, 5);
+
+        var uniqueGames = filteredData.map(function (d) {
+          return {
+            id: d.Name + " (" + d.Platform + ")",
+            Name: d.Name,
+            Platform: d.Platform,
+            NA_Sales: d.NA_Sales,
+            EU_Sales: d.EU_Sales,
+            JP_Sales: d.JP_Sales,
+            Other_Sales: d.Other_Sales
+          };
+        });
+        // Define regions
+        var regions = ["NA_Sales", "EU_Sales", "JP_Sales", "Other_Sales"];
+
+
+        var colorPalette1 = [
+          "#2ca02c", // green
+          "#1f77b4", // blue
+          "#d62728", //red
+          "#ff7f0e" // orange
+
+        ];
+
+
+        // Define color scale for regions
+        var colorScale = d3.scaleOrdinal()
+          .domain(regions)
+          .range(colorPalette1);
+
+        // Create scales for the third chart
+        var xScale = d3.scaleBand()
+          .domain(uniqueGames.map(function (d) { return d.id; }))
+          .range([0, width])
+          .padding(0.1);
+
+        var yScale = d3.scaleLinear()
+          .domain([0, d3.max(uniqueGames, function (d) {
+            return d3.max(regions, function (key) { return d[key]; });
+          })]).nice()
+          .range([height, 0]);
+
+        // Create SVG element for the third chart
+        var svg3 = d3.select("#chart3").select("g");
+
+        // Remove previous contents of the third chart
+        svg3.selectAll("*").remove();
+
+        var gameGroups = svg3.selectAll(".gameGroup")
+          .data(uniqueGames)
+          .enter().append("g")
+          .attr("class", "gameGroup")
+          .attr("transform", function (d) { return "translate(" + xScale(d.id) + ",0)"; })
+
+        // Add bars for each region
+        regions.forEach(function (region, index) {
+          gameGroups.append("rect")
+            .attr("class", "bar")
+            .attr("x", function () { return index * (xScale.bandwidth() / regions.length); })
+            .attr("width", xScale.bandwidth() / regions.length)
+            .attr("y", function (d) { return yScale(d[region]); })
+            .attr("height", function (d) { return height - yScale(d[region]); })
+            .attr("fill", colorScale(region));
+        });
+
+        svg3.selectAll(".grid").remove();
+        svg3.append("g")
+          .attr("class", "grid")
+          .call(d3.axisLeft(yScale)
+            .tickSize(-width)
+            .tickFormat(""))
+          .selectAll("line")
+          .style("stroke", "black")
+          .style("stroke-dasharray", "2,2")
+          .style("opacity", "0.5");
+
+
+        // Add x-axis
+        svg3.append("g")
+          .attr("class", "axis")
+          .attr("transform", "translate(0," + (height) + ")")
+          .call(d3.axisBottom(xScale))
+          .selectAll("text")
+          .style("text-anchor", "end")
+          .attr("dx", "-.8em")
+          .attr("dy", ".15em")
+          .attr("transform", "rotate(-30)");
+
+        // Add y-axis
+        svg3.append("g")
+          .attr("class", "axis")
+          .call(d3.axisLeft(yScale)
+            .tickFormat(function (d) { return d; }));
+
+
+        // Add y-axis label
+        svg3.append("text")
+          .attr("transform", "rotate(-90)")
+          .attr("y", 0 - margin.left)
+          .attr("x", 0 - (height / 2))
+          .attr("dy", "1em")
+          .style("text-anchor", "middle")
+          .text("Sales (millions)");
+
+        // Add chart title
+        svg3.append("text")
+          .attr("class", "chart-title3")
+          .attr("x", width / 2)
+          .attr("y", 0 - (margin.top / 2))
+          .attr("text-anchor", "middle")
+          .style("font-size", "16px")
+          .style("text-decoration", "underline")
+          .style("fotn-weight", "bold")
+          .text("Top 5 Games Sales Distribution for " + selectedYear + " - " + selectedGenre);
+
+        var legend = svg3.append("g")
+          .attr("class", "legend")
+          .attr("transform", "translate(" + (width - 10) + "," + 10 + ")");
+
+        regions.forEach(function (region, index) {
+          var legendRow = legend.append("g")
+            .attr("transform", "translate(0," + (index * 20) + ")");
+
+          legendRow.append("rect")
+            .attr("width", 10)
+            .attr("height", 10)
+            .attr("fill", colorScale(region));
+
+          legendRow.append("text")
+            .attr("x", -10)
+            .attr("y", 10)
+            .attr("text-anchor", "end")
+            .style("text-transform", "capitalize")
+            .text(region.split("_")[0]); // Display "NA", "EU", "JP", "Other"
+        });
+
+
+      }
+
+
+
+      function updatePieChart(genreData) {
+        var pie = d3.pie()
+          .value(function (d) { return d.count; })
+          .sort(null);
+
+        var arc = d3.arc()
+          .innerRadius(0)
+          .outerRadius(radius);
+
+        var path = svgPie.selectAll("path")
+          .data(pie(genreData));
+
+        // Enter new slices
+        path.enter().append("path")
+          .attr("d", arc)
+          .attr("fill", function (d, i) { return colorPalette[i % colorPalette.length]; })
+          .each(function (d) { this._current = d; })
+          .attr("stroke", "black")
+          .style("stroke-width", "0.5px");
+
+        // Update existing slices
+        path.transition()
+          .duration(750)
+          .attrTween("d", function (d) {
+            var i = d3.interpolate(this._current, d);
+            this._current = i(0);
+            return function (t) {
+              return arc(i(t));
+            };
+          });
+
+        // Remove old slices
+        path.exit().remove();
+
+        // Add pie chart title
+        svgPie.selectAll(".chart-title-pie").remove();
+        svgPie.append("text")
+          .attr("class", "chart-title-pie")
+          .attr("x", 0)
+          .attr("y", -height / 2 - margin.top / 2)
+          .attr("text-anchor", "middle")
+          .style("font-size", "16px")
+          .style("text-decoration", "underline")
+          .text("Genre Distribution for " + d3.select("#yearValue").text());
+
+
+        var total = d3.sum(genreData, function (d) { return d.count; });
+        var labels = svgPie.selectAll("text.pie-label")
+          .data(pie(genreData));
+
+
+        // Enter new labels
+        labels.enter().append("text")
+          .attr("class", "pie-label")
+          .attr("transform", function (d) {
+            var centroid = arc.centroid(d);
+            var x = centroid[0] * 1.7;
+            var y = centroid[1] * 1.7;
+            var angle = Math.atan2(y, x) * (180 / Math.PI);
+            return "translate(" + x + "," + y + ") rotate(" + angle + ")";
+          })
+          .attr("dy", "0.35em")
+          .style("text-anchor", "middle")
+          .text(function (d) { return (d.data.count / total * 100).toFixed(1) + "%"; });
+
+        // Update existing labels
+        labels.transition()
+          .duration(750)
+          .attr("transform", function (d) {
+            var centroid = arc.centroid(d);
+            var x = centroid[0] * 1.7;
+            var y = centroid[1] * 1.7;
+            var angle = Math.atan2(y, x) * (180 / Math.PI);
+            return "translate(" + x + "," + y + ") rotate(" + angle + ")";
+          })
+          .attr("dy", "0.35em")
+          .style("text-anchor", "middle")
+          .text(function (d) { return (d.data.count / total * 100).toFixed(1) + "%"; });
+
+        // Remove old labels
+        labels.exit().remove();
+      }
+
+
+      updateChart1(d3.max(years));
+      updateChart2('all');
+
+      // Update charts when slider is changed
+      yearSlider.on("input", function () {
+        var selectedYear = d3.select(this).property("value");
+        updateChart1(selectedYear);
+      });
+
+      // Update charts when genre is changed
+      genreSelect.on("change", function () {
+        var selectedGenre = d3.select(this).property("value");
+        updateChart2(selectedGenre);
+      });
+    });
+  </script>
+</body>
+
+</html>
