@@ -1,5 +1,9 @@
+body{
+  background-color: lightgrey;
+}
+
 h1 {
-    font-family: 'Arial', sans-serif; 
+    font-family: 'Verdana', sans-serif; 
     font-size: 36px;                 
     font-weight: bold;               
     color: #333;                   
@@ -27,6 +31,8 @@ h1 {
     width: 80%;
     
     margin-right: 10px;
+    
+    
   }
 
   #yearValue {
@@ -38,10 +44,7 @@ h1 {
     margin: 20px;
   }
 
-  .chart-container {
-    display: flex;
-    justify-content:space-evenly;
-  }
+
 
   .chart {
     width: 50%;
@@ -55,12 +58,42 @@ h1 {
   .slider_
   {
     width: 50%;
+    
+    
   }
 
   .chart-container {
     display: flex;
     justify-content: space-between;
     margin-bottom: 20px;
+  }
+  .chart-title1{
+    font-size: 50px; 
+    font-family: 'Arial', sans-serif;
+    font-weight: bold; 
+    text-decoration: underline; 
+    text-anchor: middle;
+  }
+  .chart-title2{
+    font-size: 50px; 
+    font-family: 'Arial', sans-serif;
+    font-weight: bold; 
+    text-decoration: underline; 
+    text-anchor: middle;
+  }
+  .chart-title3{
+    font-size: 50px; 
+    font-family: 'Arial', sans-serif;
+    font-weight: bold; 
+    text-decoration: underline; 
+    text-anchor: middle;
+  }
+  .chart-title-pie{
+    font-size: 50px; 
+    font-family: 'Arial', sans-serif;
+    font-weight: bold; 
+    text-decoration: underline; 
+    text-anchor: middle 
   }
 
  
