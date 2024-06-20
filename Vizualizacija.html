@@ -39,7 +39,7 @@
     var margin = { top: 40, right: 20, bottom: 70, left: 80 };
     var width = 700 - margin.left - margin.right;
     var height = 450 - margin.top - margin.bottom;
-    var radius = Math.min(width, height) / 2;
+    var radius = Math.min(width, height) / 2; // min uzima najmanju vrijednost
 
     var colorPalette = [
       "#1f77b4", // blue
@@ -106,7 +106,7 @@
     var y3 = d3.scaleLinear()
       .range([height, 0]);
 
-    // Add initial axes groups
+    // Dodavanje x i y osa
     svg1.append("g")
       .attr("class", "axis-x1")
       .attr("transform", "translate(0," + height + ")");
@@ -130,7 +130,7 @@
 
     // Load JSON data
     d3.json("data.json").then(function (data) {
-      // Get unique years and genres from data
+      // map vrati sve godine (sa ponavaljanjem), Set izdvoji jedinstvene godine, array prebaci set u array
       var years = Array.from(new Set(data.map(function (d) { return d.Year; }))).sort();
       var genres = Array.from(new Set(data.map(function (d) { return d.Genre; }))).sort();
 
@@ -159,6 +159,7 @@
           return d.Year == selectedYear;
         });
 
+        //prazni objekt
         var genreCounts = {};
         filteredData.forEach(function (game) {
           if (game.Genre in genreCounts) {
@@ -191,12 +192,12 @@
 
         // Enter new bars
         // Add event listener to bars in the first chart
-        bars.enter().append("rect")
-          .attr("class", "bar1")
-          .attr("x", function (d) { return x1(d.genre); })
-          .attr("y", function (d) { return y1(d.count); })
-          .attr("width", x1.bandwidth())
-          .attr("height", function (d) { return height - y1(d.count); })
+        bars.enter().append("rect") // prosirim svaki novi data point sa rect
+          .attr("class", "bar1") // stavim klasu bar1
+          .attr("x", function (d) { return x1(d.genre); }) // x pozicija svakog bar-a
+          .attr("y", function (d) { return y1(d.count); }) // y pozicija svakog bar-a
+          .attr("width", x1.bandwidth()) // širina bar-a
+          .attr("height", function (d) { return height - y1(d.count); }) // visina bar-a
           .attr("fill", function (d, i) { return colorPalette[i % colorPalette.length]; })
           .on("click", function (event, d) {
             var clickedGenre = d.genre;
@@ -215,15 +216,15 @@
           .attr("height", function (d) { return height - y1(d.count); })
           .attr("fill", function (d, i) { return colorPalette[i % colorPalette.length]; });
 
-        // Remove old bars
+        // Remove old bars, barovi koji nemaju odgovarajuću/pripadajuću datu nakon updatea genredata se miču
         bars.exit().remove();
 
         svg1.selectAll(".grid").remove();
         svg1.append("g")
           .attr("class", "grid")
-          .call(d3.axisLeft(y1)
-            .tickSize(-width)
-            .tickFormat(""))
+          .call(d3.axisLeft(y1) // kreira lijevo orijentiranu osu koristeći y1 skalu
+            .tickSize(-width) // kako bi se proširilo u desnu stranu
+            .tickFormat("")) // miče se tekst za liniju sa y osi
           .selectAll("line")
           .style("stroke", "black")
           .style("stroke-dasharray", "2,2")
@@ -292,6 +293,8 @@
         });
 
         // Aggregate global sales by year
+        // prvi argument je data, v predstavlja grupu objekata koji imaju nešto zajedničko
+        // (u ovom slučaju istu godinu), i za te godine računa sum global sales
         var salesData = d3.rollup(filteredData,
           function (v) { return d3.sum(v, function (d) { return d.Global_Sales; }); },
           function (d) { return d.Year; });
@@ -302,10 +305,10 @@
         });
 
         // Ensure we have data for all years from 1980 to 2016
-        var allYears = d3.range(1980, 2017);
-        salesArray = allYears.map(function (year) {
-          var entry = salesArray.find(function (d) { return d.year === year; });
-          return entry ? entry : { year: year, sales: 0 };
+        var allYears = d3.range(1980, 2017); // kreira array integera
+        salesArray = allYears.map(function (year) { // za sve godine u allYears
+          var entry = salesArray.find(function (d) { return d.year === year; }); // pronađi entry za tu godinu
+          return entry ? entry : { year: year, sales: 0 }; // ako ima ok, ako nema stavi da su sales 0
         });
 
         // Sort sales data by year
@@ -457,7 +460,7 @@
 
         // Create scales for the third chart
         var xScale = d3.scaleBand()
-          .domain(uniqueGames.map(function (d) { return d.id; }))
+          .domain(uniqueGames.map(function (d) { return d.id; })) // domena su 5 igrica koje smo izdvojili
           .range([0, width])
           .padding(0.1);
 
@@ -473,6 +476,7 @@
         // Remove previous contents of the third chart
         svg3.selectAll("*").remove();
 
+        // bind uniqueGames data to .gameGroup elements (g elements)
         var gameGroups = svg3.selectAll(".gameGroup")
           .data(uniqueGames)
           .enter().append("g")
@@ -483,7 +487,7 @@
         regions.forEach(function (region, index) {
           gameGroups.append("rect")
             .attr("class", "bar")
-            .attr("x", function () { return index * (xScale.bandwidth() / regions.length); })
+            .attr("x", function () { return index * (xScale.bandwidth() / regions.length); }) // index regije * duljina x osi / 5 (5 regija)
             .attr("width", xScale.bandwidth() / regions.length)
             .attr("y", function (d) { return yScale(d[region]); })
             .attr("height", function (d) { return height - yScale(d[region]); })
@@ -568,12 +572,12 @@
 
       function updatePieChart(genreData) {
         var pie = d3.pie()
-          .value(function (d) { return d.count; })
+          .value(function (d) { return d.count; }) // koliko će svaki slice imati vrijednost
           .sort(null);
 
         var arc = d3.arc()
-          .innerRadius(0)
-          .outerRadius(radius);
+          .innerRadius(0) // kreće od sredine
+          .outerRadius(radius); // završava koliki je radius
 
         var path = svgPie.selectAll("path")
           .data(pie(genreData));
@@ -582,7 +586,7 @@
         path.enter().append("path")
           .attr("d", arc)
           .attr("fill", function (d, i) { return colorPalette[i % colorPalette.length]; })
-          .each(function (d) { this._current = d; })
+          .each(function (d) { this._current = d; }) // sprema datu u properti DOM objekata
           .attr("stroke", "black")
           .style("stroke-width", "0.5px");
 
